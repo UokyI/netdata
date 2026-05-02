@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetData - Android客户端</title>
+    
+    <!-- QRCode.js 用于生成二维码 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    
+    <!-- 样式文件 -->
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部设备信息栏（宽屏优化） -->
+        <div class="device-info-bar">
+            <div class="device-info-content">
+                <!-- 左侧：连接状态 -->
+                <div id="connectionStatus" class="status-badge status-disconnected">
+                    🔴 未连接
+                </div>
+                
+                <!-- 中间：设备信息（仅宽屏显示） -->
+                <div class="device-info-grid">
+                    <div class="info-item">
+                        <span class="info-label">设备类型:</span>
+                        <span id="deviceType" class="info-value">-</span>
+                    </div>
+                </div>
+                
+                <!-- 右侧：设置按钮 -->
+                <div class="settings-section">
+                    <button id="settingsBtn" class="btn-settings" onclick="openSettingsModal()" title="连接设置">
+                        ⚙️ 设置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 首次使用提示条 -->
+        <div id="firstTimeHint" class="first-time-hint" style="display: none;">
+            <div class="hint-content">
+                <span class="hint-icon">💡</span>
+                <span class="hint-text">
+                    <strong>首次使用？</strong>
+                    Android设备访问：<span class="url-highlight" id="hintUrl">http://xxx.xxx.x.x:3001</span>
+                </span>
+                <div class="hint-actions">
+                    <button class="btn-hint" onclick="copyFromHint()">📋 复制</button>
+                    <button class="btn-hint" onclick="showQRCodeFromHint()">📱 扫码</button>
+                    <button class="btn-hint btn-hint-close" onclick="dismissFirstTimeHint()">×</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 连接设置模态框 -->
+        <div id="settingsModal" class="modal-overlay" style="display: none;" onclick="closeSettingsModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3>⚙️ 连接设置</h3>
+                    <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- 设备信息区域 -->
+                    <div class="device-details-section">
+                        <h4 style="margin: 0 0 12px 0; color: #2d3748; font-size: 1em;">📱 设备信息</h4>
+                        <div class="device-info-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px;">
+                            <div class="device-info-item">
+                                <span class="info-label">设备名称:</span>
+                                <span id="modalDeviceName" class="info-value">-</span>
+                            </div>
+                            <div class="device-info-item">
+                                <span class="info-label">设备ID:</span>
+                                <span id="modalDeviceId" class="info-value monospace">-</span>
+                            </div>
+                            <div class="device-info-item">
+                                <span class="info-label">设备类型:</span>
+                                <span id="modalDeviceType" class="info-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 二维码区域 -->
+                    <div class="qrcode-section">
+                        <div class="qrcode-wrapper">
+                            <div id="modalQrcode"></div>
+                            <p class="qrcode-label">扫描二维码快速连接</p>
+                        </div>
+                        
+                        <div class="connection-info">
+                            <label class="info-label">访问地址：</label>
+                            <div class="url-box">
+                                <span id="modalAccessUrl">http://xxx.xxx.x.x:3001</span>
+                                <button class="btn-copy-url" onclick="copyFromModal()">📋</button>
+                            </div>
+                            
+                            <div class="network-tip">
+                                <strong>💡 使用提示：</strong>
+                                <ul>
+                                    <li>确保手机和电脑连接到<strong>同一Wi-Fi网络</strong></li>
+                                    <li>打开手机相机或扫码应用，对准上方二维码</li>
+                                    <li>或在手机浏览器中输入以上URL</li>
+                                    <li>连接成功后即可互相发送消息和文件</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 快捷操作 -->
+                    <div class="quick-actions">
+                        <button class="btn-action" onclick="copyFromModal()">
+                            <span class="action-icon">📋</span>
+                            <span class="action-text">复制URL</span>
+                        </button>
+                        <button class="btn-action" onclick="openInNewTab()">
+                            <span class="action-icon">🌐</span>
+                            <span class="action-text">浏览器打开</span>
+                        </button>
+                        <button class="btn-action" onclick="refreshQRCode()">
+                            <span class="action-icon">🔄</span>
+                            <span class="action-text">刷新二维码</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主布局：左右分栏 -->
+        <div class="main-layout">
+            <!-- 左侧面板：发送表单 -->
+            <div class="left-panel">
+                <!-- 发送数据 -->
+                <div class="card">
+                    <h2>📤 发送消息</h2>
+                    <form id="sendForm">
+                        <div class="form-group">
+                            <label for="deviceName">设备名称</label>
+                            <input type="text" id="deviceName" placeholder="例如: My Android Phone" value="Android Device">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">消息内容</label>
+                            <textarea 
+                                id="message" 
+                                rows="6" 
+                                placeholder="输入要发送的消息..."
+                                class="drop-zone-textarea"
+                            >Hello from Device!</textarea>
+                            <input type="file" id="fileInput" style="display: none;" multiple>
+                            
+                            <!-- 移动端文件上传按钮 -->
+                            <div id="mobileUploadSection" style="display: none; margin-top: 10px;">
+                                <button type="button" id="mobileUploadBtn" class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 1em;">
+                                    📎 选择文件上传
+                                </button>
+                            </div>
+                            
+                            <!-- 拖拽提示（仅桌面端显示） -->
+                            <div id="dragHint" style="margin-top: 8px; font-size: 0.85em; color: #999;">
+                                💡 提示：拖拽文件到此处可自动发送
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">发送数据</button>
+                    </form>
+                    
+                    <div id="sendResponse"></div>
+                    <div id="fileList" style="margin-top: 15px;"></div>
+                    <div id="fileResponse"></div>
+                </div>
+
+            </div>
+
+            <!-- 右侧面板：消息窗口 -->
+            <div class="right-panel">
+                <!-- 接收的数据列表 -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0;">📨 消息窗口</h2>
+                        <div>
+                            <button class="btn btn-test" onclick="loadReceivedData()" style="width: auto; padding: 8px 20px; margin-right: 10px;">刷新</button>
+                            <button class="btn btn-test" onclick="clearAllData()" style="background: #e53e3e; width: auto; padding: 8px 20px;">清除</button>
+                        </div>
+                    </div>
+                    <div id="dataList">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 全局拖拽事件拦截（防止浏览器直接打开文件）==========
+        // 策略：只在非目标区域阻止默认行为
+        
+        // 允许拖拽的目标元素ID列表
+        const ALLOWED_DROP_ZONES = ['message', 'dropZone'];
+        
+        // 检查事件目标是否在允许的区域
+        function isInAllowedZone(target) {
+            // 等待DOM加载完成后再检查
+            if (typeof document === 'undefined') return false;
+            
+            return ALLOWED_DROP_ZONES.some(id => {
+                const el = document.getElementById(id);
+                return el && (el === target || el.contains(target));
+            });
+        }
+        
+        // 获取当前服务器地址
+        const serverUrl = window.location.origin;
+        
+        // 生成或获取设备唯一ID
+        function getDeviceId() {
+            let deviceId = localStorage.getItem('netdata_device_id');
+            if (!deviceId) {
+                // 生成随机ID: 时间戳 + 随机数
+                deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('netdata_device_id', deviceId);
+            }
+            return deviceId;
+        }
+        
+        const deviceId = getDeviceId();
+        
+        // 更新设备信息
+        function updateDeviceInfo() {
+            console.log('开始检测设备信息...');
+            const ua = navigator.userAgent;
+            console.log('User-Agent:', ua);
+            
+            let deviceType = 'Unknown';
+            let defaultDeviceName = 'Unknown Device';
+            
+            // 更精确的设备类型检测
+            if (/Android/i.test(ua)) {
+                deviceType = 'Android';
+                
+                // 尝试获取Android设备型号
+                const match = ua.match(/Android[\s\/]+([\d.]+);[\s]*([^;)]+)/);
+                if (match && match[2]) {
+                    defaultDeviceName = match[2].trim(); // 例如 "Pixel 5", "Samsung S21"
+                    console.log('检测到Android设备型号:', defaultDeviceName);
+                } else {
+                    defaultDeviceName = 'Android Device';
+                    console.log('检测到Android设备，但无法获取具体型号');
+                }
+            } else if (/iPhone|iPad|iPod/i.test(ua)) {
+                deviceType = 'iOS';
+                defaultDeviceName = 'Apple Device';
+                console.log('检测到iOS设备');
+            } else if (/Windows/i.test(ua)) {
+                deviceType = 'Windows PC';
+                defaultDeviceName = 'Windows PC';
+                console.log('检测到Windows系统');
+            } else if (/Macintosh/i.test(ua)) {
+                deviceType = 'Mac';
+                defaultDeviceName = 'Mac Computer';
+                console.log('检测到Mac系统');
+            } else if (/Linux/i.test(ua)) {
+                deviceType = 'Linux';
+                defaultDeviceName = 'Linux PC';
+                console.log('检测到Linux系统');
+            } else {
+                deviceType = 'Desktop';
+                defaultDeviceName = 'Desktop PC';
+                console.log('检测到桌面设备');
+            }
+            
+            console.log('设备类型:', deviceType);
+            console.log('设备名称:', defaultDeviceName);
+            
+            // 更新DOM元素（只保留deviceType）
+            const deviceTypeEl = document.getElementById('deviceType');
+            
+            if (deviceTypeEl) {
+                deviceTypeEl.textContent = deviceType;
+                console.log('已更新设备类型显示');
+            } else {
+                console.error('找不到deviceType元素');
+            }
+            
+            // 保存设备信息到localStorage（供模态框使用）
+            localStorage.setItem('netdata_device_name', defaultDeviceName);
+            localStorage.setItem('netdata_device_id', deviceId);
+            localStorage.setItem('netdata_screen_width', window.screen.width.toString());
+            console.log('已保存设备信息到localStorage');
+            
+            // 设置默认设备名称（如果还没有设置过）
+            const deviceNameInput = document.getElementById('deviceName');
+            if (deviceNameInput && !deviceNameInput.dataset.hasBeenSet) {
+                deviceNameInput.value = defaultDeviceName;
+                deviceNameInput.dataset.hasBeenSet = 'true';
+                console.log('已设置设备名称输入框:', defaultDeviceName);
+            }
+            
+            // 设置默认消息内容（如果还没有设置过）
+            const messageInput = document.getElementById('message');
+            if (messageInput && !messageInput.dataset.hasBeenSet) {
+                messageInput.value = `Hello from ${defaultDeviceName}!`;
+                messageInput.dataset.hasBeenSet = 'true';
+                console.log('已设置默认消息:', messageInput.value);
+            }
+            
+            // ✅ 检测是否为移动设备，显示/隐藏文件上传按钮
+            initMobileUpload();
+            
+            console.log('设备信息更新完成');
+        }
+        
+        // 检查连接状态
+        async function checkConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            try {
+                const response = await fetch(`${serverUrl}/api/ping`);
+                if (response.ok) {
+                    statusEl.textContent = '🟢 已连接';
+                    statusEl.className = 'status-badge status-connected';
+                    return true;
+                }
+            } catch (error) {
+                statusEl.textContent = '🔴 未连接';
+                statusEl.className = 'status-badge status-disconnected';
+                return false;
+            }
+        }
+        
+        // 发送数据
+        async function sendData(device, message) {
+            const responseEl = document.getElementById('sendResponse');
+            responseEl.innerHTML = '<div class="loading"><div class="spinner"></div> 发送中...</div>';
+            
+            try {
+                // 在设备名称后添加唯一ID后缀，便于区分不同设备
+                const deviceWithId = `${device} (${deviceId.substr(-6)})`;
+                
+                const response = await fetch(`${serverUrl}/api/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        device: deviceWithId, 
+                        message, 
+                        type: 'text',
+                        deviceId: deviceId  // 同时发送设备ID
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    responseEl.innerHTML = `
+                        <div class="response-box success">
+<strong>✅ 发送成功!</strong>
+<div style="font-size: 0.9em; margin-top: 8px;">设备: ${deviceWithId}</div>
+<div style="font-size: 0.9em;">时间: ${new Date().toLocaleString('zh-CN')}</div>
+                        </div>
+                    `;
+                    
+                    // 发送成功后刷新数据列表
+                    loadReceivedData();
+                } else {
+                    throw new Error(data.message || '发送失败');
+                }
+            } catch (error) {
+                responseEl.innerHTML = `
+                    <div class="response-box error">
+<strong>❌ 发送失败:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 表单提交
+        document.getElementById('sendForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const device = document.getElementById('deviceName').value;
+            const message = document.getElementById('message').value;
+            
+            await sendData(device, message);
+        });
+        
+        // 监听设备名称变化，自动更新默认消息
+        document.getElementById('deviceName').addEventListener('input', function(e) {
+            const messageInput = document.getElementById('message');
+            const currentMessage = messageInput.value;
+            const newDeviceName = e.target.value;
+            
+            // 如果当前消息是默认的"Hello from XXX!"格式，则自动更新
+            if (currentMessage.startsWith('Hello from ') && currentMessage.endsWith('!')) {
+                messageInput.value = `Hello from ${newDeviceName}!`;
+            }
+        });
+        
+        // ========== 文件传输功能 ==========
+        
+        // 存储待发送的文件列表
+        let pendingFiles = [];
+        
+        // 初始化拖拽区域
+        function initDropZone() {
+            const fileInput = document.getElementById('fileInput');
+            const messageTextarea = document.getElementById('message');
+            
+            if (!fileInput) {
+                console.error('[NetData] 找不到文件输入元素');
+                return;
+            }
+            
+            if (!messageTextarea) {
+                console.error('[NetData] 找不到消息输入框元素');
+                return;
+            }
+            
+            console.log('[NetData] 找到文件输入元素和消息输入框');
+            
+            // 文件选择器变化
+            fileInput.addEventListener('change', (e) => {
+                console.log('[NetData] 文件选择器变化, 文件数量:', e.target.files.length);
+                handleFiles(e.target.files);
+                fileInput.value = ''; // 清空以便重复选择同一文件
+            });
+            
+            // textarea支持拖拽
+            messageTextarea.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                messageTextarea.classList.add('drag-over');
+                console.log('[NetData] textarea dragenter事件触发');
+            });
+            
+            messageTextarea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                messageTextarea.classList.add('drag-over');
+            });
+            
+            messageTextarea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                messageTextarea.classList.remove('drag-over');
+            });
+            
+            messageTextarea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                messageTextarea.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                console.log('[NetData] textarea drop事件触发, 文件数量:', files.length);
+                
+                if (files.length > 0) {
+                    // 处理文件并自动发送
+                    handleFiles(files);
+                    console.log('[NetData] handleFiles调用完成, pendingFiles数量:', pendingFiles.length);
+                    
+                    // 如果有文件且当前没有正在发送的文件，自动发送第一个
+                    if (pendingFiles.length > 0) {
+                        const lastFileIndex = pendingFiles.length - 1;
+                        console.log('[NetData] 准备自动发送文件, 索引:', lastFileIndex);
+                        setTimeout(() => {
+                            console.log('[NetData] 开始执行sendFile, 索引:', lastFileIndex);
+                            sendFile(lastFileIndex);
+                        }, 100);
+                    } else {
+                        console.warn('[NetData] pendingFiles为空，无法自动发送');
+                    }
+                }
+            });
+
+            console.log('[NetData] 拖拽区域初始化完成');
+        }
+        
+        // ✅ 初始化移动端文件上传功能
+        function initMobileUpload() {
+            const isMobile = checkIsMobile();
+            const mobileUploadSection = document.getElementById('mobileUploadSection');
+            const mobileUploadBtn = document.getElementById('mobileUploadBtn');
+            const dragHint = document.getElementById('dragHint');
+            const fileInput = document.getElementById('fileInput');
+            
+            console.log('[NetData] 设备类型检测:', isMobile ? '移动端' : '桌面端');
+            
+            if (isMobile) {
+                // 移动端：显示文件上传按钮，隐藏拖拽提示
+                if (mobileUploadSection) {
+                    mobileUploadSection.style.display = 'block';
+                }
+                if (dragHint) {
+                    dragHint.style.display = 'none';
+                }
+                
+                // 绑定点击事件
+                if (mobileUploadBtn && fileInput) {
+                    mobileUploadBtn.addEventListener('click', () => {
+                        console.log('[NetData] 📎 移动端点击文件上传按钮');
+                        fileInput.click();
+                    });
+                    
+                    // 监听文件选择
+                    fileInput.addEventListener('change', (e) => {
+                        console.log('[NetData] 📎 文件选择触发, 文件数量:', e.target.files.length);
+                        if (e.target.files.length > 0) {
+                            handleFiles(e.target.files);
+                            
+                            // 自动发送第一个文件
+                            setTimeout(() => {
+                                sendFile(0);
+                            }, 100);
+                        }
+                    });
+                }
+                
+                console.log('[NetData] ✅ 移动端文件上传功能已启用');
+            } else {
+                // 桌面端：隐藏文件上传按钮，显示拖拽提示
+                if (mobileUploadSection) {
+                    mobileUploadSection.style.display = 'none';
+                }
+                if (dragHint) {
+                    dragHint.style.display = 'block';
+                }
+                
+                console.log('[NetData] ✅ 桌面端拖拽模式已启用');
+            }
+        }
+        
+        // 检测是否为移动设备
+        function checkIsMobile() {
+            const ua = navigator.userAgent.toLowerCase();
+            const isPhone = /android|webos|iphone|ipad|ipod|blackberry|windows phone/.test(ua);
+            const isSmallScreen = window.innerWidth < 768; // 屏幕宽度小于768px
+            
+            return isPhone || isSmallScreen;
+        }
+        
+        // 处理文件
+        function handleFiles(files) {
+            console.log('[NetData] handleFiles被调用, 文件数量:', files.length);
+            const fileList = Array.from(files);
+            
+            fileList.forEach(file => {
+                console.log('[NetData] 处理文件:', file.name, '大小:', file.size, '类型:', file.type);
+                
+                // 检查文件大小（限制为10GB）
+                if (file.size > 10 * 1024 * 1024 * 1024) {
+                    alert(`文件 "${file.name}" 超过10GB限制`);
+                    return;
+                }
+                
+                // 添加到待发送列表
+                pendingFiles.push({
+                    file: file,
+                    id: Date.now() + Math.random(),
+                    status: 'pending'
+                });
+                
+                console.log('[NetData] 文件已添加到pendingFiles, 当前总数:', pendingFiles.length);
+            });
+            
+            updateFileList();
+            console.log('[NetData] 文件列表UI已更新');
+        }
+        
+        // 更新文件列表显示
+        function updateFileList() {
+            const fileListEl = document.getElementById('fileList');
+            
+            if (pendingFiles.length === 0) {
+                fileListEl.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            pendingFiles.forEach((item, index) => {
+                const fileSize = formatFileSize(item.file.size);
+                const fileIcon = getFileIcon(item.file.type);
+                
+                html += `
+                    <div class="file-item" id="file-${item.id}">
+                        <div class="file-icon">${fileIcon}</div>
+                        <div class="file-info">
+                            <div class="file-name">${item.file.name}</div>
+                            <div class="file-size">${fileSize}</div>
+                            ${item.status === 'sending' ? '<div class="file-progress"><div class="file-progress-bar" style="width: 50%"></div></div>' : ''}
+                        </div>
+                        <div class="file-actions">
+                            ${item.status === 'pending' ? `<button class="file-btn file-btn-send" onclick="sendFile(${index})">发送</button>` : ''}
+                            <button class="file-btn file-btn-remove" onclick="removeFile(${index})">移除</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            fileListEl.innerHTML = html;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 发送文件（按钮点击触发）
+        async function sendFile(index) {
+            console.log('[NetData] 📤 点击发送按钮，索引:', index);
+            
+            if (index < 0 || index >= pendingFiles.length) {
+                console.error('[NetData] ❌ 文件索引无效:', index);
+                return;
+            }
+            
+            const item = pendingFiles[index];
+            console.log('[NetData] 准备发送文件:', item.file.name);
+            
+            await sendFileItem(item, index);
+        }
+        
+        // 获取文件图标
+        function getFileIcon(mimeType) {
+            if (mimeType.startsWith('image/')) return '🖼️';
+            if (mimeType.startsWith('video/')) return '🎥';
+            if (mimeType.startsWith('audio/')) return '🎵';
+            if (mimeType.includes('pdf')) return '📄';
+            if (mimeType.includes('zip') || mimeType.includes('rar')) return '📦';
+            if (mimeType.includes('text')) return '📝';
+            return '📎';
+        }
+        
+        // 发送单个文件 - 使用FormData直接上传二进制文件
+        async function sendFileItem(item, index) {
+            const responseEl = document.getElementById('fileResponse');
+            
+            // 如果找不到响应区域，至少要有日志输出
+            if (!responseEl) {
+                console.error('[NetData] ❌ 找不到 fileResponse 元素！');
+            }
+            
+            // 更新状态为发送中
+            item.status = 'sending';
+            updateFileList();
+            
+            responseEl.innerHTML = '<div class="loading"><div class="spinner"></div> 正在发送文件...</div>';
+            
+            try {
+                // ✅ 优化方案：使用 FormData 直接上传二进制文件，避免 Base64 编码
+                const formData = new FormData();
+                
+                // 获取设备名称
+                const deviceName = document.getElementById('deviceName').value;
+                const deviceWithId = `${deviceName} (${deviceId.substr(-6)})`;
+                
+                // 添加文件信息
+                formData.append('device', deviceWithId);
+                formData.append('message', `[FILE] ${item.file.name} (${formatFileSize(item.file.size)})`);
+                formData.append('type', 'file');
+                formData.append('fileName', item.file.name);
+                formData.append('fileSize', item.file.size.toString());
+                formData.append('fileType', item.file.type || 'application/octet-stream');
+                formData.append('file', item.file); // 直接附加二进制文件
+                
+                // 发送文件
+                const response = await fetch(`${serverUrl}/api/send`, {
+                    method: 'POST',
+                    body: formData // 浏览器自动设置正确的 Content-Type
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    responseEl.innerHTML = `
+                        <div class="response-box success">
+<strong>✅ 文件发送成功!</strong><br>
+文件名: ${item.file.name}<br>
+大小: ${formatFileSize(item.file.size)}
+                        </div>
+                    `;
+                    
+                    // 从列表中移除已发送的文件
+                    pendingFiles.splice(index, 1);
+                    updateFileList();
+                    
+                    // 刷新消息窗口
+                    loadReceivedData();
+                } else {
+                    throw new Error(data.message || '发送失败');
+                }
+            } catch (error) {
+                item.status = 'pending';
+                updateFileList();
+                
+                responseEl.innerHTML = `
+                    <div class="response-box error">
+<strong>❌ 发送失败:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 读取文件为Base64
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // 移除文件
+        function removeFile(index) {
+            if (index < 0 || index >= pendingFiles.length) return;
+            
+            pendingFiles.splice(index, 1);
+            updateFileList();
+            
+            const responseEl = document.getElementById('fileResponse');
+            responseEl.innerHTML = '';
+        }
+        
+        // 初始化应用
+        function initApp() {
+            console.log('[NetData] 开始初始化应用...');
+            
+            // 初始化拖拽区域
+            initDropZone();
+            console.log('[NetData] 拖拽区域初始化完成');
+            
+            // ✅ 初始化移动端文件上传功能
+            initMobileUpload();
+            
+            // ✅ 显示首次使用提示（延迟1秒，等待页面完全加载）
+            setTimeout(() => {
+                if (typeof showFirstTimeHint === 'function') {
+                    showFirstTimeHint();
+                }
+            }, 1000);
+            
+            // 其他初始化操作可以在这里添加
+        }
+        
+        // 测试连接
+        async function testConnection() {
+            const responseEl = document.getElementById('testResponse');
+            responseEl.innerHTML = '<div class="loading"><div class="spinner"></div> 测试中...</div>';
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/info`);
+                const data = await response.json();
+                
+                responseEl.innerHTML = `
+                    <div class="response-box success">
+<strong>✅ 连接成功!</strong>
+服务器信息: ${JSON.stringify(data.data, null, 2)}
+                    </div>
+                `;
+            } catch (error) {
+                responseEl.innerHTML = `
+                    <div class="response-box error">
+<strong>❌ 连接失败:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 发送快速消息
+        async function sendQuickMessage() {
+            // 获取当前设备名称
+            const currentDeviceName = document.getElementById('deviceName').value;
+            
+            // 根据设备类型生成不同的问候语
+            const greetings = [
+                `Hello from ${currentDeviceName}!`,
+                `Greetings from ${currentDeviceName}!`,
+                `${currentDeviceName} says hi!`,
+                `Message from ${currentDeviceName}`,
+                `来自 ${currentDeviceName} 的问候`
+            ];
+            
+            const randomMsg = greetings[Math.floor(Math.random() * greetings.length)];
+            await sendData(currentDeviceName, randomMsg);
+        }
+        
+        // ========== 全局变量 ==========
+        let lastDataCount = 0; // 记录上次的数据条数
+        let pollingInterval = null; // 轮询定时器
+        
+        // 智能轮询：只在数据有变化时才更新DOM
+        function startSmartPolling() {
+            // 清除旧的轮询（如果存在）
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+            
+            // 设置新的轮询（2秒间隔）
+            pollingInterval = setInterval(async () => {
+                try {
+                    // console.log(`[NetData] 🔄 轮询检查... (${new Date().toLocaleTimeString()})`);
+                    
+                    const response = await fetch(`${serverUrl}/api/data`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // 只有当数据条数发生变化时才更新DOM
+                    if (data.success && data.count !== lastDataCount) {
+                        console.log(`[NetData] ✨ 检测到数据变化: ${lastDataCount} -> ${data.count} 条`);
+                        lastDataCount = data.count;
+                        
+                        // 调用完整的渲染函数
+                        renderDataList(data);
+                    } else if (data.success) {
+                        // console.log(`[NetData] ✓ 数据无变化 (${data.count} 条)`);
+                    }
+                } catch (error) {
+                    console.error('[NetData] ❗ 轮询失败:', error.message);
+                }
+            }, 2000); // 2秒轮询一次
+            
+            console.log('[NetData] ✅ 智能轮询已启动（2秒间隔）');
+        }
+        
+        // 完整的数据列表渲染函数
+        async function renderDataList(data) {
+            const dataListEl = document.getElementById('dataList');
+            
+            if (data.success && data.count > 0) {
+                let html = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
+                        <span style="color: #667eea; font-weight: bold; font-size: 1.1em;">💬 消息列表</span>
+                        <span class="message-count">${data.count} 条消息</span>
+                    </div>
+                    <div class="message-window">
+                `;
+                
+                // 按时间倒序显示（最新的在前）
+                const sortedData = [...data.data].reverse();
+                
+                sortedData.forEach((item, index) => {
+                    const time = new Date(item.timestamp).toLocaleString('zh-CN');
+                    const isLatest = index === 0;
+                    
+                    // 判断是否为文件类型
+                    const isFile = item.type === 'file';
+                    // ✅ 优化：检查是否有下载链接（新方案）或 fileData（旧方案兼容）
+                    const hasDownloadUrl = item.downloadUrl;
+                    const hasFileData = isFile && (item.fileData || item.hasFileData);
+                    
+                    html += `
+                        <div class="data-item" style="${isLatest ? 'border-left-color: #48bb78; background: #f0fff4;' : ''}">
+                            <div class="data-header">
+                                <span class="data-device">📱 ${item.device}</span>
+                                <span class="data-time">${time}</span>
+                            </div>
+                            <div class="data-type">${item.type}</div>
+                            <div class="data-message">${item.message}</div>
+                            ${hasDownloadUrl ? `
+                                <div style="margin-top: 10px;">
+                                    <button onclick="window.open('${item.downloadUrl}', '_blank')" 
+                                            class="btn btn-primary" 
+                                            style="padding: 8px 16px; font-size: 0.9em;">
+                                        📥 下载文件 (${item.fileName})
+                                    </button>
+                                    <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                        ${item.fileSize ? formatFileSize(item.fileSize) : ''}
+                                    </span>
+                                </div>
+                            ` : hasFileData ? `
+                                <div style="margin-top: 10px;">
+                                    <button onclick="downloadFile('${item.id}', '${item.fileName || 'download'}')" 
+                                            class="btn btn-primary" 
+                                            style="padding: 8px 16px; font-size: 0.9em;">
+                                        📥 下载文件
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                dataListEl.innerHTML = html;
+            } else {
+                dataListEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p style="font-size: 1.2em; margin-bottom: 10px;">暂无消息</p>
+                        <p style="font-size: 0.9em;">发送消息后将在此处显示</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 原有的 loadReceivedData 函数（保留用于手动刷新）
+        async function loadReceivedData() {
+            const dataListEl = document.getElementById('dataList');
+            
+            try {
+                console.log('[NetData] 📊 手动加载数据...');
+                const response = await fetch(`${serverUrl}/api/data`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('[NetData] 📊 数据加载成功:', data);
+                
+                // 更新全局计数
+                if (data.success) {
+                    lastDataCount = data.count;
+                }
+                
+                // 使用统一的渲染函数
+                await renderDataList(data);
+            } catch (error) {
+                console.error('[NetData] ❌ 加载数据失败:', error);
+                dataListEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p style="font-size: 1.1em; margin-bottom: 10px; color: #e53e3e;">加载失败</p>
+                        <p style="font-size: 0.9em; color: #666;">${error.message}</p>
+                        <button onclick="loadReceivedData()" class="btn btn-test" style="margin-top: 15px;">重试</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // 清除所有数据
+        async function clearAllData() {
+            if (!confirm('确定要清除所有数据吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/data`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('数据已清除');
+                    loadReceivedData();
+                }
+            } catch (error) {
+                alert('清除失败: ' + error.message);
+            }
+        }
+        
+        // 下载文件
+        async function downloadFile(fileId, fileName) {
+            try {
+                console.log('开始下载文件:', fileId, fileName);
+                
+                // 获取所有数据
+                const response = await fetch(`${serverUrl}/api/data`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error('获取数据失败');
+                }
+                
+                // 查找对应的文件记录
+                const fileRecord = data.data.find(item => item.id == fileId || item.fileId == fileId);
+                
+                if (!fileRecord) {
+                    throw new Error('找不到文件记录');
+                }
+                
+                if (!fileRecord.fileData) {
+                    throw new Error('文件数据不存在');
+                }
+                
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.href = fileRecord.fileData;
+                link.download = fileRecord.fileName || fileName || 'download';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('文件下载成功:', fileRecord.fileName);
+            } catch (error) {
+                console.error('文件下载失败:', error);
+                alert(`下载失败: ${error.message}`);
+            }
+        }
+        
+        // 初始化
+        function init() {
+            console.log('=== 页面初始化开始 ===');
+            console.log('document.readyState:', document.readyState);
+            
+            updateDeviceInfo();
+            checkConnection();
+            
+            // 初始化拖拽区域
+            initApp();
+            
+            // 延迟加载数据，确保服务器已就绪
+            setTimeout(() => {
+                console.log('[NetData] 开始加载数据...');
+                loadReceivedData();
+                
+                // 启动智能轮询（每2秒检查一次）
+                startSmartPolling();
+            }, 500);
+            
+            // ========== Electron IPC 支持 ==========
+            // 如果运行在 Electron 环境中，监听实时消息
+            if (typeof window.electronAPI !== 'undefined' && window.electronAPI.onNewData) {
+                console.log('[NetData] 检测到 Electron 环境，启用实时消息推送');
+                
+                window.electronAPI.onNewData((data) => {
+                    console.log('[NetData] ⚡ 收到实时新数据:', data);
+                    
+                    // 立即刷新数据列表
+                    loadReceivedData();
+                    
+                    // 可选：显示通知提示
+                    showNotification(data);
+                });
+            } else {
+                console.log('[NetData] 🌐 浏览器环境，使用智能轮询模式（2秒间隔）');
+            }
+            
+            console.log('=== 页面初始化完成 ===');
+        }
+        
+        // 显示桌面通知
+        function showNotification(data) {
+            // 检查是否支持通知 API
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification('收到新消息', {
+                    body: `${data.device}: ${data.message}`,
+                    icon: '/favicon.ico'
+                });
+            }
+        }
+        
+        // 请求通知权限（仅在 Electron 中自动请求）
+        if (typeof window.electronAPI !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    console.log('[NetData] 通知权限状态:', permission);
+                });
+            }
+        }
+        
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+            console.log('DOM正在加载，等待DOMContentLoaded事件...');
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            console.log('DOM已就绪，立即初始化...');
+            init();
+        }
+        
+        // 每10秒检查一次连接状态
+        setInterval(checkConnection, 10000);
+        
+        // 智能轮询已在 init() 中通过 startSmartPolling() 启动，此处不再需要旧的 setInterval
+    </script>
+
+    <!-- JavaScript 模块 -->
+    <script src="js/device-info.js"></script>
+    <script src="js/connection-settings.js"></script>
+    <script src="js/file-upload.js"></script>
+</body>
+</html>
