@@ -150,7 +150,7 @@ function landingPageHtml(ip, port) {
 // 注册所有 API 路由
 // options.onDataReceived(data) — 可选回调，收到数据时触发（用于 Electron IPC）
 function registerApiRoutes(app, options = {}) {
-    const PORT = process.env.PORT || 3001;
+    const PORT = process.env.PORT || 52587;
     let receivedData = [];
 
     // 获取或设置数据存储（允许外部访问以支持 IPC）

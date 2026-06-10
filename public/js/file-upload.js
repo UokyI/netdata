@@ -18,6 +18,12 @@
             fileInput.addEventListener('change', (e) => {
                 console.log('[NetData] 文件选择器变化, 文件数量:', e.target.files.length);
                 handleFiles(e.target.files);
+                // 移动端/桌面端都自动发送
+                if (e.target.files.length > 0) {
+                    setTimeout(() => {
+                        if (pendingFiles.length > 0) sendFile(0);
+                    }, 100);
+                }
                 fileInput.value = ''; // 清空以便重复选择同一文件
             });
             
@@ -90,24 +96,11 @@
                     dragHint.style.display = 'none';
                 }
                 
-                // 绑定点击事件
+                // 绑定点击事件（移动端按钮 → 触发文件选择器）
                 if (mobileUploadBtn && fileInput) {
                     mobileUploadBtn.addEventListener('click', () => {
                         console.log('[NetData] 📎 移动端点击文件上传按钮');
                         fileInput.click();
-                    });
-                    
-                    // 监听文件选择
-                    fileInput.addEventListener('change', (e) => {
-                        console.log('[NetData] 📎 文件选择触发, 文件数量:', e.target.files.length);
-                        if (e.target.files.length > 0) {
-                            handleFiles(e.target.files);
-                            
-                            // 自动发送第一个文件
-                            setTimeout(() => {
-                                sendFile(0);
-                            }, 100);
-                        }
                     });
                 }
                 

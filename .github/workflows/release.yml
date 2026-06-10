@@ -1,0 +1,92 @@
+name: Release
+
+# 推送 v* 标签时自动触发
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许创建 Release 和上传资产
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: 编译各平台
+        run: |
+          mkdir -p dist
+          
+          # Windows 64位
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/netdata-server-windows-amd64.exe main.go
+          
+          # macOS Intel
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/netdata-server-darwin-amd64 main.go
+          
+          # macOS Apple Silicon
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/netdata-server-darwin-arm64 main.go
+          
+          # Linux 64位
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/netdata-server-linux-amd64 main.go
+          
+          # Linux ARM64 (Android Termux / 树莓派)
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/netdata-server-linux-arm64 main.go
+          
+          echo "=== 编译完成 ==="
+          ls -lh dist/
+
+      - name: 打包公共资源
+        run: |
+          # 将 public/ 目录和可执行文件打包在一起
+          for bin in dist/netdata-server-*; do
+            name=$(basename "$bin")
+            dir="dist/${name%.*}"
+            mkdir -p "$dir"
+            cp "$bin" "$dir/"
+            cp -r public "$dir/"
+            cp -r uploads "$dir/" 2>/dev/null || mkdir -p "$dir/uploads"
+            
+            # Windows 用 zip，其他用 tar.gz
+            if [[ "$name" == *".exe" ]]; then
+              (cd dist && zip -r "${name%.*}.zip" "${name%.*}")
+            else
+              tar -czf "dist/${name%.*}.tar.gz" -C dist "${name%.*}"
+            fi
+          done
+          
+          echo "=== 打包完成 ==="
+          ls -lh dist/*.zip dist/*.tar.gz 2>/dev/null
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: |
+            ## 安装
+            下载对应平台的压缩包，解压后运行即可。
+            
+            ### Windows
+            解压 `netdata-server-windows-amd64.zip`，双击 `netdata-server.exe`
+            
+            ### macOS
+            解压 `netdata-server-darwin-*.tar.gz`，终端运行 `./netdata-server`
+            
+            ### Linux
+            解压 `netdata-server-linux-amd64.tar.gz`，终端运行 `./netdata-server`
+            
+            ---
+            源码压缩包由 GitHub 自动生成。
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

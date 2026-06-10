@@ -10,13 +10,14 @@ const cors = require('cors');
 require('dotenv').config();
 
 const { getLocalIP, registerApiRoutes } = require('./routes');
+const { ensureFirewallRule } = require('./firewall');
 
 let mainWindow;
 let server;
 
 // 启动 Express 服务器
 function startExpressServer() {
-    const PORT = process.env.PORT || 3001;
+    const PORT = process.env.PORT || 52587;
     const expressApp = express();
 
     // 中间件
@@ -33,6 +34,9 @@ function startExpressServer() {
             }
         }
     });
+
+    // 自动配置防火墙（Windows）
+    ensureFirewallRule();
 
     return new Promise((resolve, reject) => {
         server = expressApp.listen(PORT, '0.0.0.0', () => {
@@ -153,7 +157,7 @@ ipcMain.handle('get-app-info', () => {
 // 获取服务器信息（局域网IP和端口）
 ipcMain.handle('get-server-info', () => {
     const ip = getLocalIP();
-    const PORT = process.env.PORT || 3001;
+    const PORT = process.env.PORT || 52587;
     return {
         ip: ip,
         port: PORT,

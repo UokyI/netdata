@@ -10,7 +10,10 @@
     "electron:build": "electron-builder",
     "electron:build:win": "electron-builder --win",
     "electron:build:mac": "electron-builder --mac",
-    "electron:build:all": "electron-builder --win --mac"
+    "electron:build:all": "electron-builder --win --mac",
+    "generate-icons": "node scripts/generate-icons.js",
+    "build:go": "scripts\\build-go.bat",
+    "build:go:unix": "bash scripts/build-go.sh"
   },
   "keywords": [
     "wifi",
@@ -29,7 +32,9 @@
     "electron": "^41.4.0",
     "electron-builder": "^26.8.1",
     "electron-is-dev": "^3.0.1",
-    "nodemon": "^3.0.1"
+    "nexe": "^5.0.0-beta.4",
+    "nodemon": "^3.0.1",
+    "sharp": "^0.34.5"
   },
   "build": {
     "appId": "com.netdata.app",
@@ -41,6 +46,7 @@
       "electron-main.js",
       "preload.js",
       "routes.js",
+      "firewall.js",
       "public/**/*",
       "package.json"
     ],
@@ -54,7 +60,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.png"
     },
     "win": {
       "target": [

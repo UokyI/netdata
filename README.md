@@ -1,12 +1,26 @@
-# NetData - 同Wi-Fi下电脑与Android设备通信应用
+﻿# NetData - 同Wi-Fi下电脑与Android设备通信应用
 
 ## 📖 项目简介
 
-这是一个基于Node.js的局域网双向通信应用，实现了在同一Wi-Fi网络下，电脑与Android移动设备之间的实时数据交互。通过美观的Web界面和RESTful API，支持文件传输、消息推送和数据同步等功能。
+这是一个同时支持 **Node.js** 和 **Go** 双后端的局域网通信应用。Go 版本可编译为单文件可执行程序（~6MB），零依赖运行。
 
 **使用方式**：
-- 🌐 **纯Web模式**: 运行 `npm start`，通过浏览器访问（推荐）
-- 💻 **Electron桌面应用**: 运行 `npm run electron:dev`，使用独立桌面窗口
+- 🚀 **Go 单文件**: 编译后 6MB，零依赖，直接运行（推荐）
+- 🌐 **Node.js 开发模式**: `npm start`，适合调试
+
+---
+
+## 📸 界面预览
+
+### 🖥️ 桌面端 — 双栏布局
+![桌面端](screenshots/pc.png)
+
+*左侧发送面板（消息 + 文件拖拽 + 赞赏码），右侧消息窗口（实时刷新）*
+![alt text](screenshots/settings.png)
+### 📱 移动端 — 单栏布局  
+![移动端](screenshots/android.png)
+
+*适配手机屏幕，选文件自动发送，支持 PWA 添加到主屏幕*
 
 ---
 
@@ -17,7 +31,7 @@
 - ✅ **RESTful API**: 提供完整的API接口进行数据交互
 - ✅ **大文件传输**: 支持最大10GB的文件传输（二进制直传 + 服务器存储）
 - ✅ **拖拽发送**: 支持拖拽文件到输入框自动发送
-- ✅ **跨平台**: 支持任何有浏览器的Android/iOS设备
+- ✅ **多平台**: Windows / macOS / Linux / Android (PWA)
 - ✅ **实时状态**: 显示连接状态和数据传输情况
 - ✅ **数据记录**: 保存所有接收到的数据并实时刷新
 - ✅ **设备识别**: 自动识别设备类型（Mac/Linux/Windows）
@@ -28,23 +42,13 @@
 ## 🔧 技术栈
 
 ### 后端
-- **运行时**: Node.js (v14.0+)
-- **框架**: Express.js
+- **Go** (1.21+) + 标准库 — 推荐方案，编译后 ~6MB 单文件，零依赖
+- **Node.js** (v14.0+) + Express.js — 开发调试
 - **通信协议**: HTTP (RESTful API)
 - **跨域支持**: CORS
-- **文件上传**: multer（用于处理 multipart/form-data）
-- **文件系统**: fs模块（用于文件存储）
-- **依赖包**: 
-  - `express` - Web框架
-  - `cors` - 跨域支持
-  - `multer` - 文件上传中间件
-  - `electron-is-dev` - Electron开发环境检测
-  - `os` - 操作系统信息
-
-**Electron打包版本**:
-- **主进程**: electron-main.js
-- **渲染进程**: public/index.html
-- **预加载脚本**: preload.js
+- **文件上传**: multipart/form-data
+- Node.js 依赖: `express`, `cors`, `multer`, `dotenv`
+- Go 标准库 `net/http` — 无需外部依赖
 
 ### 前端
 - **基础**: HTML5 + CSS3 + Vanilla JavaScript (无框架)
@@ -105,9 +109,22 @@ npm install
 
 ### 3. 启动服务
 
-本项目支持两种启动方式：
+本项目支持三种启动方式：
 
-**方式一: 纯Web浏览器模式（推荐）**
+**方式一: Go 单文件模式（推荐分发）**
+
+编译为独立可执行文件，零依赖，6MB，直接运行：
+
+```bash
+# 编译（需安装 Go 1.21+）
+npm run build:go
+# 或手动: go build -ldflags="-s -w" -o dist/netdata-server.exe main.go
+
+# 运行
+dist\netdata-server.exe
+```
+
+**方式二: 纯Web浏览器模式（推荐开发）**
 
 直接启动HTTP服务器，通过浏览器访问：
 
@@ -120,33 +137,40 @@ npm start
 ```bash
 npm run dev
 ```
-windows需要手动设定防火墙通行
-```
-netsh advfirewall firewall add rule name="NetData 3001" dir=in action=allow protocol=TCP localport=3001
-```
-启动后，在浏览器中访问终端显示的URL（例如：`http://192.168.x.x:3001`）
 
-**方式二: Electron桌面应用模式**
+> 🔒 **Windows 防火墙**：程序启动时会自动尝试配置防火墙规则。如果提示权限不足，请以管理员身份运行一次以下命令：
+> ```bash
+> netsh advfirewall firewall add rule name="NetData Server" dir=in action=allow protocol=TCP localport=52587
+> ```
 
-启动桌面应用程序：
+启动后，在浏览器中访问终端显示的URL（例如：`http://192.168.x.x:52587`）
+
+**方式三: Electron 桌面应用（已弃用，仅保留代码）**
+
+如需桌面窗口体验，可运行：
 
 ```bash
 npm run electron:dev
 ```
 
-这会打开一个独立的桌面应用窗口，内置服务器和Web界面。
+### 4. 打包体积对比
 
-### 4. 访问服务
+| 方案 | 大小 | 适用场景 |
+|------|------|---------|
+| 🚀 **Go 编译** | **~6 MB** | 推荐，零依赖单文件 |
+| 🌐 Node.js 开发 | ~50 MB | 本地调试 |
+
+### 5. 访问服务
 
 服务启动后，终端会显示访问地址：
 
 ```
-🌐 局域网访问: http://192.168.x.x:3001
+🌐 局域网访问: http://192.168.x.x:52587
 💡 Android设备可以通过此URL访问
 ```
 
 **注意**: 
-- 默认端口为3001（如被占用会自动切换）
+- 默认端口为52587（避免常见端口冲突）
 - 确保防火墙允许该端口访问
 - **重要**: `192.168.x.x` 是示例地址，实际使用时请查看终端显示的你的电脑真实局域网IP
 
@@ -161,7 +185,7 @@ npm run electron:dev
    - 确认网络可以互相访问
 
 2. **获取访问地址**
-   - 查看电脑终端显示的URL（例如: `http://192.168.x.x:3001`）
+   - 查看电脑终端显示的URL（例如: `http://192.168.x.x:52587`）
    - **注意**: IP地址是动态获取的，以终端实际显示为准
 
 3. **在Android设备上访问**
@@ -183,7 +207,7 @@ RequestBody body = RequestBody.create(
 );
 
 Request request = new Request.Builder()
-    .url("http://192.168.x.x:3001/api/send")  // 修改为终端显示的实际IP
+    .url("http://192.168.x.x:52587/api/send")  // 修改为终端显示的实际IP
     .post(body)
     .build();
 
@@ -212,7 +236,7 @@ val body = RequestBody.create(
 )
 
 val request = Request.Builder()
-    .url("http://192.168.x.x:3001/api/send")  // 修改为终端显示的实际IP
+    .url("http://192.168.x.x:52587/api/send")  // 修改为终端显示的实际IP
     .post(body)
     .build()
 
@@ -234,14 +258,14 @@ client.newCall(request).enqueue(object : Callback {
 
 ### 基础信息
 
-- **Base URL**: `http://192.168.x.x:3001`（请将 `192.168.x.x` 替换为你的实际局域网IP）
+- **Base URL**: `http://192.168.x.x:52587`（请将 `192.168.x.x` 替换为你的实际局域网IP）
 - **Content-Type**: `application/json`
 - **CORS**: 已启用，支持跨域请求
 
 **如何获取你的IP地址**:
 启动服务后，终端会显示类似以下信息：
 ```
-🌐 局域网访问: http://192.168.x.x:3001
+🌐 局域网访问: http://192.168.x.x:52587
 ```
 使用显示的完整URL作为API的Base URL。
 
@@ -260,7 +284,7 @@ client.newCall(request).enqueue(object : Callback {
   "data": {
     "ip": "192.168.x.x",
     "port": 3001,
-    "accessUrl": "http://192.168.x.x:3001",
+    "accessUrl": "http://192.168.x.x:52587",
     "timestamp": "2026-05-01T06:00:00.000Z",
     "message": "Android设备可以通过此URL访问"
   }
@@ -298,7 +322,7 @@ formData.append('fileType', 'audio/mpeg');
 formData.append('file', fileObject); // 直接附加二进制文件
 
 // fetch发送
-fetch('http://192.168.x.x:3001/api/send', {
+fetch('http://192.168.x.x:52587/api/send', {
     method: 'POST',
     body: formData
 });
@@ -440,7 +464,7 @@ fetch('http://192.168.x.x:3001/api/send', {
 **示例**:
 ```
 # 从消息中获取 downloadUrl，例如：/api/download/1777620780341_abc123_video.mp4
-curl -O http://192.168.x.x:3001/api/download/1777620780341_abc123_video.mp4
+curl -O http://192.168.x.x:52587/api/download/1777620780341_abc123_video.mp4
 ```
 
 **响应**: 
@@ -514,7 +538,7 @@ curl -O http://192.168.x.x:3001/api/download/1777620780341_abc123_video.mp4
 ### 拖拽文件自动发送
 
 **操作流程**:
-1. 打开Web界面（使用终端显示的URL，如 `http://192.168.x.x:3001`）
+1. 打开Web界面（使用终端显示的URL，如 `http://192.168.x.x:52587`）
 2. 将文件拖拽到消息输入框或指定区域
 3. 松开鼠标，文件自动开始发送
 4. 等待发送完成，查看结果
@@ -574,11 +598,11 @@ curl -O http://192.168.x.x:3001/api/download/1777620780341_abc123_video.mp4
 
 ### 端口配置
 
-**修改端口**（默认3001）:
+**修改端口**（默认52587）:
 
-编辑 `electron-main.js` 或 `server.js`:
+编辑 `.env` 或 `main.go`:
 ```javascript
-const PORT = 3001; // 改为你想要的端口
+const PORT = 52587; // 改为你想要的端口
 ```
 
 **端口选择建议**:
@@ -668,7 +692,7 @@ app.use(express.urlencoded({ extended: true, limit: '10gb' }));
 ps aux | grep node
 
 # 2. 查看端口占用
-lsof -i :3001
+lsof -i :52587
 
 # 3. 检查防火墙设置
 sudo ufw status  # Linux
@@ -763,13 +787,13 @@ touch uploads/.gitkeep
 ps aux | grep electron
 
 # 2. 查看终端显示的实际IP地址
-# 启动时会显示：🌐 局域网访问: http://192.168.x.x:3001
+# 启动时会显示：🌐 局域网访问: http://192.168.x.x:52587
 
 # 3. 测试API连通性（在手机浏览器访问）
-http://192.168.x.x:3001/api/info
+http://192.168.x.x:52587/api/info
 
 # 4. 检查数据是否存在
-http://192.168.x.x:3001/api/data
+http://192.168.x.x:52587/api/data
 
 # 5. 确保智能轮询正常工作
 # 前端每2秒自动检查新数据
@@ -811,24 +835,24 @@ http://192.168.x.x:3001/api/data
 
 **1. 测试服务器连通性**:
 ```bash
-curl http://192.168.x.x:3001/api/ping
+curl http://192.168.x.x:52587/api/ping
 ```
 
 **2. 获取服务器信息**:
 ```bash
-curl http://192.168.x.x:3001/api/info
+curl http://192.168.x.x:52587/api/info
 ```
 
 **3. 发送测试数据**:
 ```bash
-curl -X POST http://192.168.x.x:3001/api/send \
+curl -X POST http://192.168.x.x:52587/api/send \
   -H "Content-Type: application/json" \
   -d '{"device":"Test","message":"Hello","type":"text"}'
 ```
 
 **4. 查看所有数据**:
 ```bash
-curl http://192.168.x.x:3001/api/data
+curl http://192.168.x.x:52587/api/data
 ```
 
 **预期输出**:
@@ -850,34 +874,49 @@ curl http://192.168.x.x:3001/api/data
 
 ```
 netdata/
-├── electron-main.js       # Electron主进程（服务器）
-├── preload.js            # Electron预加载脚本
-├── server.js             # 独立服务器入口（可选）
+├── main.go               # Go 后端（单文件，零依赖）
+├── go.mod                # Go 模块定义
+├── routes.js             # Node.js 共享路由模块
+├── firewall.js           # Windows 防火墙自动配置
+├── server.js             # Node.js 独立服务器入口
+├── electron-main.js      # Electron 桌面应用主进程
+├── preload.js            # Electron 预加载脚本
 ├── package.json          # 项目配置和依赖
-├── .gitignore            # Git忽略配置
+├── .env.example          # 环境变量示例
+├── CHANGELOG.md          # 更新日志
 ├── README.md             # 项目文档
+├── scripts/              # 编译/构建脚本
+│   ├── build-go.bat      # Go 交叉编译 (Windows)
+│   ├── build-go.sh       # Go 交叉编译 (macOS/Linux)
+│   └── generate-icons.js # SVG → ICO/PNG 图标生成
+├── .github/              # GitHub 配置
+│   └── skills/release/   # Release 发布流程
+├── assets/               # 图标源文件
+│   ├── icon.svg          # 矢量图标源文件
+│   ├── icon.ico          # Windows 图标 (自动生成)
+│   └── icon.png          # macOS 图标 (自动生成)
 ├── uploads/              # 上传文件存储目录
-│   └── .gitkeep          # Git保留目录
-└── public/               # 静态文件目录
-    ├── index.html        # Web界面主文件
-    ├── css/              # 样式文件
-    │   └── main.css      # 主要样式
-    └── js/               # JavaScript文件
-        ├── device-info.js        # 设备信息检测
-        ├── connection-settings.js # 连接设置和二维码
-        └── file-upload.js        # 文件上传和拖拽
+│   └── .gitkeep
+└── public/               # 前端静态文件
+    ├── index.html        # Web 界面
+    ├── css/main.css      # 样式
+    ├── js/               # JS 模块
+    │   ├── device-info.js
+    │   ├── connection-settings.js
+    │   └── file-upload.js
+    └── assets/           # 前端资源
+        └── donate-qr.png # 赞赏码
 ```
 
 **关键文件说明**:
-- `electron-main.js`: Express服务器、API路由、文件存储逻辑
-- `server.js`: 独立Node.js服务器（不使用Electron时）
-- `preload.js`: Electron IPC通信桥接
-- `public/index.html`: Web界面主文件
-- `public/css/main.css`: 全局样式
-- `public/js/device-info.js`: 设备信息检测功能
-- `public/js/connection-settings.js`: 连接设置和二维码功能
-- `public/js/file-upload.js`: 文件上传和拖拽功能
-- `uploads/`: 存储接收到的文件
+| 文件 | 用途 |
+|------|------|
+| `main.go` | Go 后端，编译后 ~6MB 单文件可执行 |
+| `routes.js` | Node.js 共享路由（server.js / electron-main.js 共用） |
+| `firewall.js` | Windows 防火墙自动配置 |
+| `server.js` | `npm start` 入口 |
+| `electron-main.js` | Electron 桌面应用入口 |
+| `scripts/build-go.bat` | 一键交叉编译 Windows/Mac/Linux |
 
 ### 开发流程
 
@@ -894,10 +933,16 @@ netdata/
 
 3. **启动服务**
 
+   **Go 单文件模式**（推荐分发）:
+   ```bash
+   npm run build:go      # 编译
+   dist\netdata-server.exe  # 运行
+   ```
+
    **纯Web模式**（浏览器访问）:
    ```bash
    npm start        # 正常启动
-   npm run dev      # 开发模式（自动重启，推荐）
+   npm run dev      # 开发模式（自动重启）
    ```
    
    **Electron桌面应用模式**:
@@ -907,15 +952,10 @@ netdata/
 
 4. **修改代码**
    - **后端**: 
-     - Electron模式: 修改 `electron-main.js`
-     - 纯Web模式: 修改 `server.js`
+     - Go 版: 修改 `main.go`
+     - Node.js 版: 修改 `server.js`
    - **前端**: 
-     - 页面结构: `public/index.html`
-     - 全局样式: `public/css/main.css`
-     - 功能模块: 
-       - `public/js/device-info.js` (设备信息检测)
-       - `public/js/connection-settings.js` (连接设置与二维码)
-       - `public/js/file-upload.js` (文件上传与拖拽处理)
+     - `public/index.html` / `public/css/main.css` / `public/js/`
 
 5. **提交更改**
    ```bash

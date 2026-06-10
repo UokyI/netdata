@@ -8,9 +8,10 @@ const path = require('path');
 require('dotenv').config();
 
 const { getLocalIP, registerApiRoutes } = require('./routes');
+const { ensureFirewallRule } = require('./firewall');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 52587;
 
 // 中间件
 app.use(cors());
@@ -20,6 +21,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // 注册所有 API 路由
 registerApiRoutes(app);
+
+// 自动配置防火墙（Windows）
+ensureFirewallRule();
 
 // 启动服务器
 app.listen(PORT, '0.0.0.0', () => {

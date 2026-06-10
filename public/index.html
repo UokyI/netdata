@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetData - Android客户端</title>
     
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NetData">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    
     <!-- QRCode.js 用于生成二维码 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     
@@ -44,7 +55,7 @@
                 <span class="hint-icon">💡</span>
                 <span class="hint-text">
                     <strong>首次使用？</strong>
-                    Android设备访问：<span class="url-highlight" id="hintUrl">http://xxx.xxx.x.x:3001</span>
+                    Android设备访问：<span class="url-highlight" id="hintUrl">http://xxx.xxx.x.x:52587</span>
                 </span>
                 <div class="hint-actions">
                     <button class="btn-hint" onclick="copyFromHint()">📋 复制</button>
@@ -92,7 +103,7 @@
                         <div class="connection-info">
                             <label class="info-label">访问地址：</label>
                             <div class="url-box">
-                                <span id="modalAccessUrl">http://xxx.xxx.x.x:3001</span>
+                                <span id="modalAccessUrl">http://xxx.xxx.x.x:52587</span>
                                 <button class="btn-copy-url" onclick="copyFromModal()">📋</button>
                             </div>
                             
@@ -148,13 +159,13 @@
                                 placeholder="输入要发送的消息..."
                                 class="drop-zone-textarea"
                             >Hello from Device!</textarea>
-                            <input type="file" id="fileInput" style="display: none;" multiple>
+                            <input type="file" id="fileInput" style="position:absolute;left:-9999px;" multiple>
                             
-                            <!-- 移动端文件上传按钮 -->
+                            <!-- 移动端文件上传（用 label 替代 button，兼容 Android） -->
                             <div id="mobileUploadSection" style="display: none; margin-top: 10px;">
-                                <button type="button" id="mobileUploadBtn" class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 1em;">
+                                <label for="fileInput" class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 1em; display: block; text-align: center; cursor: pointer; border-radius: 8px;">
                                     📎 选择文件上传
-                                </button>
+                                </label>
                             </div>
                             
                             <!-- 拖拽提示（仅桌面端显示） -->
@@ -445,6 +456,12 @@
             fileInput.addEventListener('change', (e) => {
                 console.log('[NetData] 文件选择器变化, 文件数量:', e.target.files.length);
                 handleFiles(e.target.files);
+                // 选完文件自动发送（桌面端和移动端通用）
+                if (e.target.files.length > 0) {
+                    setTimeout(() => {
+                        if (pendingFiles.length > 0) sendFile(0);
+                    }, 100);
+                }
                 fileInput.value = ''; // 清空以便重复选择同一文件
             });
             
@@ -502,52 +519,19 @@
         function initMobileUpload() {
             const isMobile = checkIsMobile();
             const mobileUploadSection = document.getElementById('mobileUploadSection');
-            const mobileUploadBtn = document.getElementById('mobileUploadBtn');
             const dragHint = document.getElementById('dragHint');
-            const fileInput = document.getElementById('fileInput');
             
             console.log('[NetData] 设备类型检测:', isMobile ? '移动端' : '桌面端');
             
             if (isMobile) {
-                // 移动端：显示文件上传按钮，隐藏拖拽提示
-                if (mobileUploadSection) {
-                    mobileUploadSection.style.display = 'block';
-                }
-                if (dragHint) {
-                    dragHint.style.display = 'none';
-                }
-                
-                // 绑定点击事件
-                if (mobileUploadBtn && fileInput) {
-                    mobileUploadBtn.addEventListener('click', () => {
-                        console.log('[NetData] 📎 移动端点击文件上传按钮');
-                        fileInput.click();
-                    });
-                    
-                    // 监听文件选择
-                    fileInput.addEventListener('change', (e) => {
-                        console.log('[NetData] 📎 文件选择触发, 文件数量:', e.target.files.length);
-                        if (e.target.files.length > 0) {
-                            handleFiles(e.target.files);
-                            
-                            // 自动发送第一个文件
-                            setTimeout(() => {
-                                sendFile(0);
-                            }, 100);
-                        }
-                    });
-                }
-                
+                // 移动端：显示文件上传 label（用 for 属性关联 fileInput，兼容所有浏览器）
+                if (mobileUploadSection) mobileUploadSection.style.display = 'block';
+                if (dragHint) dragHint.style.display = 'none';
                 console.log('[NetData] ✅ 移动端文件上传功能已启用');
             } else {
                 // 桌面端：隐藏文件上传按钮，显示拖拽提示
-                if (mobileUploadSection) {
-                    mobileUploadSection.style.display = 'none';
-                }
-                if (dragHint) {
-                    dragHint.style.display = 'block';
-                }
-                
+                if (mobileUploadSection) mobileUploadSection.style.display = 'none';
+                if (dragHint) dragHint.style.display = 'block';
                 console.log('[NetData] ✅ 桌面端拖拽模式已启用');
             }
         }
@@ -1092,6 +1076,15 @@
         setInterval(checkConnection, 10000);
         
         // 智能轮询已在 init() 中通过 startSmartPolling() 启动，此处不再需要旧的 setInterval
+        
+        // PWA: 注册 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(() => {
+                    console.log('[PWA] Service Worker 已注册');
+                });
+            });
+        }
     </script>
 
     <!-- JavaScript 模块 -->
