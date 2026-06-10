@@ -120,7 +120,10 @@ npm start
 ```bash
 npm run dev
 ```
-
+windows需要手动设定防火墙通行
+```
+netsh advfirewall firewall add rule name="NetData 3001" dir=in action=allow protocol=TCP localport=3001
+```
 启动后，在浏览器中访问终端显示的URL（例如：`http://192.168.x.x:3001`）
 
 **方式二: Electron桌面应用模式**

@@ -171,6 +171,29 @@
                     <div id="fileResponse"></div>
                 </div>
 
+                <!-- 赞赏码（仅桌面端显示） -->
+                <div class="card donate-card desktop-only">
+                    <h2>❤️ 赞赏支持</h2>
+                    <div class="donate-content">
+                        <div class="donate-qr-wrapper">
+                            <img 
+                                id="donateQrImg" 
+                                src="assets/donate-qr.png" 
+                                alt="赞赏码" 
+                                class="donate-qr-img"
+                                onerror="this.style.display='none'; document.getElementById('donateQrFallback').style.display='flex';"
+                            >
+                            <div id="donateQrFallback" class="donate-qr-fallback" style="display: none;">
+                                <div class="donate-qr-placeholder">
+                                    <span class="placeholder-icon">📷</span>
+                                    <span class="placeholder-text">请将赞赏码图片放置为<br><code>assets/donate-qr.png</code></span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="donate-tip">如果觉得 NetData 对你有帮助<br>欢迎扫码赞赏支持开发者 ☕</p>
+                    </div>
+                </div>
+
             </div>
 
             <!-- 右侧面板：消息窗口 -->

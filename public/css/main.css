@@ -1241,3 +1241,82 @@
                 transform: translateX(100px);
             }
         }
+
+        /* ========== 赞赏码模块样式 ========== */
+        .donate-card {
+            margin-bottom: 15px;
+        }
+
+        .donate-card h2 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .donate-content {
+            text-align: center;
+        }
+
+        .donate-qr-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .donate-qr-img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            background: #fff;
+            padding: 8px;
+        }
+
+        .donate-qr-fallback {
+            width: 200px;
+            height: 200px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donate-qr-placeholder {
+            text-align: center;
+            color: #a0aec0;
+            font-size: 0.85em;
+            line-height: 1.8;
+        }
+
+        .placeholder-icon {
+            font-size: 2.5em;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .donate-qr-placeholder code {
+            background: #edf2f7;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #667eea;
+        }
+
+        .donate-tip {
+            color: #718096;
+            font-size: 0.9em;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* 桌面端专属：移动端隐藏 */
+        .desktop-only {
+            display: block;
+        }
+
+        @media (max-width: 767px) {
+            .desktop-only {
+                display: none !important;
+            }
+        }
